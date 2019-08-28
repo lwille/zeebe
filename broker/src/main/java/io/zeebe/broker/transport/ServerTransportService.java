@@ -37,23 +37,26 @@ public class ServerTransportService implements Service<ServerTransport> {
   private final InetSocketAddress bindAddress;
 
   private final ByteValue maxMessageSize;
-
   private ServerTransport serverTransport;
+  private ServerRequestHandler requestHandler;
+  private ServerMessageHandler messageHandler;
 
   public ServerTransportService(
       final String readableName,
       final InetSocketAddress bindAddress,
-      final ByteValue maxMessageSize) {
+      final ByteValue maxMessageSize,
+      final ServerRequestHandler requestHandler,
+      final ServerMessageHandler messageHandler) {
     this.readableName = readableName;
     this.bindAddress = bindAddress;
     this.maxMessageSize = maxMessageSize;
+    this.requestHandler = requestHandler;
+    this.messageHandler = messageHandler;
   }
 
   @Override
   public void start(final ServiceStartContext serviceContext) {
     final ActorScheduler scheduler = serviceContext.getScheduler();
-    final ServerRequestHandler requestHandler = requestHandlerInjector.getValue();
-    final ServerMessageHandler messageHandler = messageHandlerInjector.getValue();
 
     final ByteValue transportBufferSize =
         ByteValue.ofBytes(maxMessageSize.toBytes() * TRANSPORT_BUFFER_FACTOR);

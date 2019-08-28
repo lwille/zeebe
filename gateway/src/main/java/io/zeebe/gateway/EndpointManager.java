@@ -289,7 +289,7 @@ public class EndpointManager extends GatewayGrpc.GatewayImplBase {
     }
 
     final StatusRuntimeException convertedThrowable = status.withCause(cause).asRuntimeException();
-    Loggers.GATEWAY_LOGGER.error("Error handling gRPC request", convertedThrowable);
+    Loggers.GATEWAY_LOGGER.trace("Error handling gRPC request", convertedThrowable);
 
     return convertedThrowable;
   }

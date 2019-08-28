@@ -90,7 +90,7 @@ public class ActivateJobsHandler {
                 response.getTruncated());
           },
           error -> {
-            Loggers.GATEWAY_LOGGER.warn(
+            Loggers.GATEWAY_LOGGER.trace(
                 "Failed to activate jobs for type {} from partition {}",
                 jobType,
                 partitionIdIterator.getCurrentPartitionId(),

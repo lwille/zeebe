@@ -11,12 +11,13 @@ import static io.zeebe.broker.clustering.base.ClusterBaseLayerServiceNames.LEADE
 import static io.zeebe.broker.transport.TransportServiceNames.COMMAND_API_MESSAGE_HANDLER;
 import static io.zeebe.broker.transport.TransportServiceNames.COMMAND_API_SERVER_NAME;
 
+import com.netflix.concurrency.limits.limit.VegasLimit;
 import io.zeebe.broker.system.Component;
 import io.zeebe.broker.system.SystemContext;
 import io.zeebe.broker.system.configuration.NetworkCfg;
-import io.zeebe.broker.transport.commandapi.CommandApiMessageHandlerService;
+import io.zeebe.broker.transport.backpressure.PartitionAwareRequestLimiter;
+import io.zeebe.broker.transport.commandapi.CommandApiRequestResponseService;
 import io.zeebe.servicecontainer.ServiceContainer;
-import io.zeebe.servicecontainer.ServiceName;
 import io.zeebe.transport.ServerMessageHandler;
 import io.zeebe.transport.ServerRequestHandler;
 import io.zeebe.transport.ServerTransport;
@@ -31,9 +32,28 @@ public class TransportComponent implements Component {
     createSocketBindings(context);
   }
 
+  private PartitionAwareRequestLimiter createRequestLimiter() {
+    final PartitionAwareRequestLimiter limiter =
+        new PartitionAwareRequestLimiter(() -> VegasLimit.newDefault());
+    return limiter;
+  }
+
   private void createSocketBindings(final SystemContext context) {
     final NetworkCfg networkCfg = context.getBrokerConfiguration().getNetwork();
     final ServiceContainer serviceContainer = context.getServiceContainer();
+
+    final PartitionAwareRequestLimiter limiter = createRequestLimiter();
+
+    final CommandApiRequestResponseService commandHandler =
+        new CommandApiRequestResponseService(limiter);
+    serviceContainer
+        .createService(COMMAND_API_MESSAGE_HANDLER, commandHandler)
+        .dependency(
+            TransportServiceNames.serverTransport(TransportServiceNames.COMMAND_API_SERVER_NAME),
+            commandHandler.getServerTransportInjector())
+        .groupReference(
+            LEADER_PARTITION_GROUP_NAME, commandHandler.getLeaderParitionsGroupReference())
+        .install();
 
     final ActorFuture<ServerTransport> commandApiFuture =
         bindNonBufferingProtocolEndpoint(
@@ -41,18 +61,10 @@ public class TransportComponent implements Component {
             serviceContainer,
             COMMAND_API_SERVER_NAME,
             networkCfg,
-            COMMAND_API_MESSAGE_HANDLER,
-            COMMAND_API_MESSAGE_HANDLER);
+            commandHandler.getServerRequestHandler(),
+            commandHandler.getServerMessageHandler());
 
     context.addRequiredStartAction(commandApiFuture);
-
-    final CommandApiMessageHandlerService messageHandlerService =
-        new CommandApiMessageHandlerService();
-    serviceContainer
-        .createService(COMMAND_API_MESSAGE_HANDLER, messageHandlerService)
-        .groupReference(
-            LEADER_PARTITION_GROUP_NAME, messageHandlerService.getLeaderParitionsGroupReference())
-        .install();
   }
 
   protected ActorFuture<ServerTransport> bindNonBufferingProtocolEndpoint(
@@ -60,8 +72,8 @@ public class TransportComponent implements Component {
       final ServiceContainer serviceContainer,
       final String name,
       final NetworkCfg networkCfg,
-      final ServiceName<? extends ServerRequestHandler> requestHandlerService,
-      final ServiceName<? extends ServerMessageHandler> messageHandlerService) {
+      final ServerRequestHandler requestHandler,
+      final ServerMessageHandler messageHandler) {
 
     final SocketAddress bindAddr = networkCfg.getCommandApi().toSocketAddress();
 
@@ -71,8 +83,8 @@ public class TransportComponent implements Component {
         name,
         bindAddr.toInetSocketAddress(),
         networkCfg.getMaxMessageSize(),
-        requestHandlerService,
-        messageHandlerService);
+        requestHandler,
+        messageHandler);
   }
 
   protected ActorFuture<ServerTransport> createServerTransport(
@@ -81,17 +93,16 @@ public class TransportComponent implements Component {
       final String name,
       final InetSocketAddress bindAddress,
       final ByteValue maxMessageSize,
-      final ServiceName<? extends ServerRequestHandler> requestHandlerDependency,
-      final ServiceName<? extends ServerMessageHandler> messageHandlerDependency) {
+      final ServerRequestHandler requestHandler,
+      final ServerMessageHandler messageHandler) {
     final ServerTransportService service =
-        new ServerTransportService(name, bindAddress, maxMessageSize);
+        new ServerTransportService(
+            name, bindAddress, maxMessageSize, requestHandler, messageHandler);
 
     systemContext.addResourceReleasingDelegate(service.getReleasingResourcesDelegate());
 
     return serviceContainer
         .createService(TransportServiceNames.serverTransport(name), service)
-        .dependency(requestHandlerDependency, service.getRequestHandlerInjector())
-        .dependency(messageHandlerDependency, service.getMessageHandlerInjector())
         .install();
   }
 }
