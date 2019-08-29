@@ -21,6 +21,7 @@ import java.util.Objects;
 
 public class OAuthCredentialsProviderBuilder {
   public static final String INVALID_ARGUMENT_MSG = "Expected valid %s but none was provided.";
+  private static final String DEFAULT_AUTHZ_SERVER = "https://login.cloud.camunda.io/oauth/token/";
 
   private String clientId;
   private String clientSecret;
@@ -74,6 +75,14 @@ public class OAuthCredentialsProviderBuilder {
 
   /** @return a new {@link OAuthCredentialsProvider} with the provided configuration options. */
   public OAuthCredentialsProvider build() {
+    checkEnvironmentOverrides();
+    applyDefaults();
+
+    validate();
+    return new OAuthCredentialsProvider(this);
+  }
+
+  private void checkEnvironmentOverrides() {
     if (System.getenv("ZEEBE_CLIENT_ID") != null) {
       this.clientId = System.getenv("ZEEBE_CLIENT_ID");
     }
@@ -86,9 +95,12 @@ public class OAuthCredentialsProviderBuilder {
     if (System.getenv("ZEEBE_AUTHORIZATION_SERVER_URL") != null) {
       this.authorizationServerUrl = System.getenv("ZEEBE_AUTHORIZATION_SERVER_URL");
     }
+  }
 
-    validate();
-    return new OAuthCredentialsProvider(this);
+  private void applyDefaults() {
+    if (authorizationServerUrl == null) {
+      authorizationServerUrl = DEFAULT_AUTHZ_SERVER;
+    }
   }
 
   private void validate() {

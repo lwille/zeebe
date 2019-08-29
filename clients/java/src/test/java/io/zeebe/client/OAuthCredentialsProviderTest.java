@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
@@ -147,7 +148,7 @@ public class OAuthCredentialsProviderTest {
     // then
     final ArgumentCaptor<Metadata> captor = ArgumentCaptor.forClass(Metadata.class);
 
-    Mockito.verify(interceptAction, times(1)).accept(any(ServerCall.class), captor.capture());
+    verify(interceptAction, times(1)).accept(any(ServerCall.class), captor.capture());
     assertThat(captor.getValue().get(AUTH_KEY)).isEqualTo(TOKEN_TYPE + " " + firstToken);
     assertThat(recordingInterceptor.getCapturedHeaders().get(AUTH_KEY))
         .isEqualTo(TOKEN_TYPE + " " + ACCESS_TOKEN);
@@ -184,7 +185,39 @@ public class OAuthCredentialsProviderTest {
     // when
     assertThatThrownBy(() -> client.newTopologyRequest().send().join())
         .isInstanceOf(ClientException.class);
-    Mockito.verify(interceptAction, times(1)).accept(any(ServerCall.class), any(Metadata.class));
+    verify(interceptAction, times(1)).accept(any(ServerCall.class), any(Metadata.class));
+  }
+
+  @Test
+  public void shouldUseClientContactPointAsDefaultAudience() {
+    // given
+    final String contactPointHost = "some.domain";
+    mockCredentials(ACCESS_TOKEN, contactPointHost);
+
+    final ZeebeClientBuilderImpl builder = new ZeebeClientBuilderImpl();
+    builder
+        .usePlaintext()
+        .brokerContactPoint(contactPointHost + ":26500")
+        .oAuthCredentialsProvider(
+            CLIENT_ID, SECRET, "http://localhost:" + wireMockRule.port() + "/oauth/token")
+        .build();
+
+    // when
+    client = new ZeebeClientImpl(builder, serverRule.getChannel());
+    client.newTopologyRequest().send().join();
+
+    // when
+    WireMock.verify(
+        WireMock.postRequestedFor(WireMock.urlPathEqualTo("/oauth/token"))
+            .withRequestBody(
+                equalToJson(
+                    "{\"client_secret\":\""
+                        + SECRET
+                        + "\",\"client_id\":\""
+                        + CLIENT_ID
+                        + "\",\"audience\": \""
+                        + contactPointHost
+                        + "\",\"grant_type\": \"client_credentials\"}")));
   }
 
   @Test
@@ -233,22 +266,6 @@ public class OAuthCredentialsProviderTest {
   }
 
   @Test
-  public void shouldFailWithNoAuthServerUrl() {
-    // when/then
-    assertThatThrownBy(
-            () ->
-                new OAuthCredentialsProviderBuilder()
-                    .audience("a")
-                    .clientId("b")
-                    .clientSecret("c")
-                    .build())
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageEndingWith(
-            String.format(
-                OAuthCredentialsProviderBuilder.INVALID_ARGUMENT_MSG, "authorization server URL"));
-  }
-
-  @Test
   public void shouldFailWithMalformedServerUrl() {
     // when/then
     assertThatThrownBy(
@@ -264,6 +281,10 @@ public class OAuthCredentialsProviderTest {
   }
 
   private void mockCredentials(final String accessToken) {
+    mockCredentials(accessToken, AUDIENCE);
+  }
+
+  private void mockCredentials(final String accessToken, final String audience) {
     wireMockRule.stubFor(
         WireMock.post(WireMock.urlPathEqualTo("/oauth/token"))
             .withHeader("Accept", equalTo("application/json"))
@@ -274,7 +295,7 @@ public class OAuthCredentialsProviderTest {
                         + "\",\"client_id\":\""
                         + CLIENT_ID
                         + "\",\"audience\": \""
-                        + AUDIENCE
+                        + audience
                         + "\",\"grant_type\": \"client_credentials\"}"))
             .willReturn(
                 WireMock.okJson(

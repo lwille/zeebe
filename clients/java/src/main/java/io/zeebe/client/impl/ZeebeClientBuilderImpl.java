@@ -27,8 +27,11 @@ import io.zeebe.client.ZeebeClientBuilder;
 import io.zeebe.client.ZeebeClientConfiguration;
 import java.time.Duration;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ZeebeClientBuilderImpl implements ZeebeClientBuilder, ZeebeClientConfiguration {
+  private static final Pattern PORT_PATTERN = Pattern.compile(":[0-9]+$");
 
   private String brokerContactPoint = "0.0.0.0:26500";
   private int jobWorkerMaxJobsActive = 32;
@@ -41,6 +44,9 @@ public class ZeebeClientBuilderImpl implements ZeebeClientBuilder, ZeebeClientCo
   private boolean usePlaintextConnection = false;
   private String certificatePath;
   private CredentialsProvider credentialsProvider;
+  private String clientId;
+  private String clientSecret;
+  private String authzServerUrl;
 
   @Override
   public String getBrokerContactPoint() {
@@ -210,8 +216,42 @@ public class ZeebeClientBuilderImpl implements ZeebeClientBuilder, ZeebeClientCo
   }
 
   @Override
+  public ZeebeClientBuilder oAuthCredentialsProvider(String clientId, String clientSecret) {
+    this.clientId = clientId;
+    this.clientSecret = clientSecret;
+    return this;
+  }
+
+  @Override
+  public ZeebeClientBuilder oAuthCredentialsProvider(
+      String clientId, String clientSecret, String authzServerUrl) {
+    this.authzServerUrl = authzServerUrl;
+    return oAuthCredentialsProvider(clientId, clientSecret);
+  }
+
+  @Override
   public ZeebeClient build() {
+    applyDefaults();
+
     return new ZeebeClientImpl(this);
+  }
+
+  private void applyDefaults() {
+    if (clientId != null && clientSecret != null) {
+      final Matcher matcher = PORT_PATTERN.matcher(brokerContactPoint);
+
+      if (matcher.find()) {
+        final String audience = brokerContactPoint.substring(0, matcher.start());
+
+        this.credentialsProvider =
+            new OAuthCredentialsProviderBuilder()
+                .clientId(clientId)
+                .clientSecret(clientSecret)
+                .audience(audience)
+                .authorizationServerUrl(authzServerUrl)
+                .build();
+      }
+    }
   }
 
   @Override
