@@ -7,19 +7,15 @@
  */
 package io.zeebe.broker.transport;
 
-import io.zeebe.broker.transport.backpressure.RequestLimiter;
-import io.zeebe.broker.transport.commandapi.CommandApiRequestResponseService;
+import io.zeebe.broker.transport.commandapi.CommandApiService;
 import io.zeebe.servicecontainer.ServiceName;
 import io.zeebe.transport.ServerTransport;
 
 public class TransportServiceNames {
-  public static final ServiceName<CommandApiRequestResponseService> COMMAND_API_MESSAGE_HANDLER =
-      ServiceName.newServiceName(
-          "transport.commandApi.messageHandler", CommandApiRequestResponseService.class);
+  public static final ServiceName<CommandApiService> COMMAND_API_SERVICE_NAME =
+      ServiceName.newServiceName("transport.commandApi.messageHandler", CommandApiService.class);
 
   public static final String COMMAND_API_SERVER_NAME = "commandApi.server";
-  public static final ServiceName<RequestLimiter> REQUEST_LIMITER_SERVICE =
-      ServiceName.newServiceName("transport.commandApu.requestLimiter", RequestLimiter.class);
 
   public static ServiceName<ServerTransport> serverTransport(String identifier) {
     return ServiceName.newServiceName(

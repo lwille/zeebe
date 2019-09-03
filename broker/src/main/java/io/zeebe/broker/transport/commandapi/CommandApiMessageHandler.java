@@ -137,11 +137,11 @@ public class CommandApiMessageHandler implements ServerMessageHandler, ServerReq
     final RequestLimiter<Void> limiter = partitionLimiters.get(partitionId);
     if (!limiter.tryAcquire(requestAddress.getStreamId(), requestId, null)) {
       metrics.dropped(partitionId);
-      Loggers.TRANSPORT_LOGGER.trace(
+      LOG.trace(
           "Partition-{} receiving too many requests. Current limit {} inflight {}, dropping request {} from gateway {}",
           partitionId,
           limiter.getLimit(),
-          limiter.getInflight(),
+          limiter.getInflightCount(),
           requestId,
           requestAddress.getAddress());
       return errorResponseWriter

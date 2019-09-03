@@ -55,6 +55,11 @@ public class CommandRateLimiter extends AbstractLimiter<Void> implements Request
     }
   }
 
+  @Override
+  public int getInflightCount() {
+    return getInflight();
+  }
+
   public static CommandRateLimiterBuilder builder() {
     return new CommandRateLimiterBuilder();
   }
@@ -72,7 +77,7 @@ public class CommandRateLimiter extends AbstractLimiter<Void> implements Request
     }
   }
 
-  class ListenerId {
+  static class ListenerId {
     private final int streamId;
     private final long requestId;
 

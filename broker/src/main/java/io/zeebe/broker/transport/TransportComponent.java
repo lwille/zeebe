@@ -8,15 +8,16 @@
 package io.zeebe.broker.transport;
 
 import static io.zeebe.broker.clustering.base.ClusterBaseLayerServiceNames.LEADER_PARTITION_GROUP_NAME;
-import static io.zeebe.broker.transport.TransportServiceNames.COMMAND_API_MESSAGE_HANDLER;
 import static io.zeebe.broker.transport.TransportServiceNames.COMMAND_API_SERVER_NAME;
+import static io.zeebe.broker.transport.TransportServiceNames.COMMAND_API_SERVICE_NAME;
 
 import com.netflix.concurrency.limits.limit.VegasLimit;
 import io.zeebe.broker.system.Component;
 import io.zeebe.broker.system.SystemContext;
 import io.zeebe.broker.system.configuration.NetworkCfg;
 import io.zeebe.broker.transport.backpressure.PartitionAwareRequestLimiter;
-import io.zeebe.broker.transport.commandapi.CommandApiRequestResponseService;
+import io.zeebe.broker.transport.commandapi.CommandApiMessageHandler;
+import io.zeebe.broker.transport.commandapi.CommandApiService;
 import io.zeebe.servicecontainer.ServiceContainer;
 import io.zeebe.transport.ServerMessageHandler;
 import io.zeebe.transport.ServerRequestHandler;
@@ -33,9 +34,7 @@ public class TransportComponent implements Component {
   }
 
   private PartitionAwareRequestLimiter createRequestLimiter() {
-    final PartitionAwareRequestLimiter limiter =
-        new PartitionAwareRequestLimiter(() -> VegasLimit.newDefault());
-    return limiter;
+    return new PartitionAwareRequestLimiter(VegasLimit::newDefault);
   }
 
   private void createSocketBindings(final SystemContext context) {
@@ -43,11 +42,12 @@ public class TransportComponent implements Component {
     final ServiceContainer serviceContainer = context.getServiceContainer();
 
     final PartitionAwareRequestLimiter limiter = createRequestLimiter();
+    final CommandApiMessageHandler commandApiMessageHandler = new CommandApiMessageHandler();
 
-    final CommandApiRequestResponseService commandHandler =
-        new CommandApiRequestResponseService(limiter);
+    final CommandApiService commandHandler =
+        new CommandApiService(commandApiMessageHandler, limiter);
     serviceContainer
-        .createService(COMMAND_API_MESSAGE_HANDLER, commandHandler)
+        .createService(COMMAND_API_SERVICE_NAME, commandHandler)
         .dependency(
             TransportServiceNames.serverTransport(TransportServiceNames.COMMAND_API_SERVER_NAME),
             commandHandler.getServerTransportInjector())
@@ -61,8 +61,8 @@ public class TransportComponent implements Component {
             serviceContainer,
             COMMAND_API_SERVER_NAME,
             networkCfg,
-            commandHandler.getServerRequestHandler(),
-            commandHandler.getServerMessageHandler());
+            commandApiMessageHandler,
+            commandApiMessageHandler);
 
     context.addRequiredStartAction(commandApiFuture);
   }

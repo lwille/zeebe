@@ -15,7 +15,7 @@ import java.util.function.Supplier;
 /** A request limiter that manages the limits for each partition independently. */
 public class PartitionAwareRequestLimiter {
 
-  final Map<Integer, CommandRateLimiter> partitionLimiters = new ConcurrentHashMap<>();
+  final Map<Integer, RequestLimiter<Void>> partitionLimiters = new ConcurrentHashMap<>();
 
   final Supplier<Limit> limitSupplier;
 
@@ -24,7 +24,7 @@ public class PartitionAwareRequestLimiter {
   }
 
   public boolean tryAcquire(int partitionId, int streamId, long requestId, Void context) {
-    final RequestLimiter limiter = getLimiter(partitionId);
+    final RequestLimiter<Void> limiter = getLimiter(partitionId);
     return limiter.tryAcquire(streamId, requestId, context);
   }
 
@@ -43,11 +43,11 @@ public class PartitionAwareRequestLimiter {
     partitionLimiters.remove(partitionId);
   }
 
-  public RequestLimiter getLimiter(int partitionId) {
+  public RequestLimiter<Void> getLimiter(int partitionId) {
     return getOrCreateLimiter(partitionId);
   }
 
-  private RequestLimiter getOrCreateLimiter(int partitionId) {
+  private RequestLimiter<Void> getOrCreateLimiter(int partitionId) {
     return partitionLimiters.computeIfAbsent(
         partitionId, k -> CommandRateLimiter.builder().limit(limitSupplier.get()).build());
   }

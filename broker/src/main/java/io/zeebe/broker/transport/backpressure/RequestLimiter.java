@@ -7,7 +7,7 @@
  */
 package io.zeebe.broker.transport.backpressure;
 
-public interface RequestLimiter<Context> {
+public interface RequestLimiter<C> {
 
   /**
    * Try to add to the inflight requests. If success, {@link #onResponse(int, long)} ()} must be
@@ -19,7 +19,7 @@ public interface RequestLimiter<Context> {
    *     accepted
    * @return true if request is added to the inflight requests, false otherwise
    */
-  boolean tryAcquire(int streamId, long requestId, Context context);
+  boolean tryAcquire(int streamId, long requestId, C context);
 
   /**
    * Notify when a request processing is completed by calling this method.
@@ -31,5 +31,5 @@ public interface RequestLimiter<Context> {
 
   int getLimit();
 
-  int getInflight();
+  int getInflightCount();
 }

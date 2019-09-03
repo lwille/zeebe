@@ -7,7 +7,6 @@
  */
 package io.zeebe.broker.transport;
 
-import io.zeebe.servicecontainer.Injector;
 import io.zeebe.servicecontainer.Service;
 import io.zeebe.servicecontainer.ServiceStartContext;
 import io.zeebe.servicecontainer.ServiceStopContext;
@@ -29,9 +28,6 @@ public class ServerTransportService implements Service<ServerTransport> {
   // max message size * factor = transport buffer size
   // - note that this factor is randomly chosen, feel free to change it
   private static final int TRANSPORT_BUFFER_FACTOR = 16;
-
-  private final Injector<ServerRequestHandler> requestHandlerInjector = new Injector<>();
-  private final Injector<ServerMessageHandler> messageHandlerInjector = new Injector<>();
 
   private final String readableName;
   private final InetSocketAddress bindAddress;
@@ -89,13 +85,5 @@ public class ServerTransportService implements Service<ServerTransport> {
         serverTransport.releaseResources();
       }
     };
-  }
-
-  public Injector<ServerRequestHandler> getRequestHandlerInjector() {
-    return requestHandlerInjector;
-  }
-
-  public Injector<ServerMessageHandler> getMessageHandlerInjector() {
-    return messageHandlerInjector;
   }
 }

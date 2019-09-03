@@ -9,7 +9,7 @@ package io.zeebe.broker.engine;
 
 import static io.zeebe.broker.engine.EngineServiceNames.ENGINE_SERVICE_NAME;
 import static io.zeebe.broker.system.SystemServiceNames.LEADER_MANAGEMENT_REQUEST_HANDLER;
-import static io.zeebe.broker.transport.TransportServiceNames.COMMAND_API_MESSAGE_HANDLER;
+import static io.zeebe.broker.transport.TransportServiceNames.COMMAND_API_SERVICE_NAME;
 
 import io.zeebe.broker.clustering.base.ClusterBaseLayerServiceNames;
 import io.zeebe.broker.engine.impl.SubscriptionApiCommandMessageHandlerService;
@@ -29,8 +29,7 @@ public class EngineComponent implements Component {
         new EngineService(serviceContainer, brokerConfiguration);
     serviceContainer
         .createService(ENGINE_SERVICE_NAME, streamProcessorService)
-        .dependency(
-            COMMAND_API_MESSAGE_HANDLER, streamProcessorService.getCommandApiServiceInjector())
+        .dependency(COMMAND_API_SERVICE_NAME, streamProcessorService.getCommandApiServiceInjector())
         .dependency(
             ClusterBaseLayerServiceNames.TOPOLOGY_MANAGER_SERVICE,
             streamProcessorService.getTopologyManagerInjector())

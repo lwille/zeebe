@@ -19,7 +19,7 @@ import io.zeebe.broker.system.configuration.ClusterCfg;
 import io.zeebe.broker.system.configuration.DataCfg;
 import io.zeebe.broker.system.management.LeaderManagementRequestHandler;
 import io.zeebe.broker.system.management.deployment.PushDeploymentRequestHandler;
-import io.zeebe.broker.transport.commandapi.CommandApiRequestResponseService;
+import io.zeebe.broker.transport.commandapi.CommandApiService;
 import io.zeebe.engine.processor.AsyncSnapshotingDirectorService;
 import io.zeebe.engine.processor.ProcessingContext;
 import io.zeebe.engine.processor.StreamProcessor;
@@ -43,8 +43,7 @@ public class EngineService implements Service<EngineService> {
 
   public static final String PROCESSOR_NAME = "zb-stream-processor";
 
-  private final Injector<CommandApiRequestResponseService> commandApiServiceInjector =
-      new Injector<>();
+  private final Injector<CommandApiService> commandApiServiceInjector = new Injector<>();
   private final Injector<TopologyManager> topologyManagerInjector = new Injector<>();
   private final Injector<Atomix> atomixInjector = new Injector<>();
   private final Injector<LeaderManagementRequestHandler> leaderManagementRequestHandlerInjector =
@@ -55,7 +54,7 @@ public class EngineService implements Service<EngineService> {
   private final Duration snapshotPeriod;
   private ServiceStartContext serviceContext;
 
-  private CommandApiRequestResponseService commandApiService;
+  private CommandApiService commandApiService;
   private TopologyManager topologyManager;
   private Atomix atomix;
   private final ServiceGroupReference<Partition> partitionsGroupReference =
@@ -158,7 +157,7 @@ public class EngineService implements Service<EngineService> {
         jobsAvailableNotification::onJobsAvailable);
   }
 
-  public Injector<CommandApiRequestResponseService> getCommandApiServiceInjector() {
+  public Injector<CommandApiService> getCommandApiServiceInjector() {
     return commandApiServiceInjector;
   }
 

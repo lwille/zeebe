@@ -15,12 +15,10 @@ import io.zeebe.servicecontainer.Service;
 import io.zeebe.servicecontainer.ServiceGroupReference;
 import io.zeebe.servicecontainer.ServiceName;
 import io.zeebe.servicecontainer.ServiceStartContext;
-import io.zeebe.transport.ServerMessageHandler;
 import io.zeebe.transport.ServerOutput;
-import io.zeebe.transport.ServerRequestHandler;
 import io.zeebe.transport.ServerTransport;
 
-public class CommandApiRequestResponseService implements Service<CommandApiRequestResponseService> {
+public class CommandApiService implements Service<CommandApiService> {
 
   private final ServiceGroupReference<Partition> leaderPartitionsGroupReference;
   private final Injector<ServerTransport> serverTransportInjector = new Injector<>();
@@ -28,9 +26,10 @@ public class CommandApiRequestResponseService implements Service<CommandApiReque
   private final PartitionAwareRequestLimiter limiter;
   private ServerOutput serverOutput;
 
-  public CommandApiRequestResponseService(PartitionAwareRequestLimiter limiter) {
+  public CommandApiService(
+      CommandApiMessageHandler commandApiMessageHandler, PartitionAwareRequestLimiter limiter) {
     this.limiter = limiter;
-    service = new CommandApiMessageHandler();
+    this.service = commandApiMessageHandler;
     leaderPartitionsGroupReference =
         ServiceGroupReference.<Partition>create()
             .onAdd(this::addPartition)
@@ -44,7 +43,7 @@ public class CommandApiRequestResponseService implements Service<CommandApiReque
   }
 
   @Override
-  public CommandApiRequestResponseService get() {
+  public CommandApiService get() {
     return this;
   }
 
@@ -60,11 +59,7 @@ public class CommandApiRequestResponseService implements Service<CommandApiReque
     return serverTransportInjector;
   }
 
-  public ServerRequestHandler getServerRequestHandler() {
-    return service;
-  }
-
-  public ServerMessageHandler getServerMessageHandler() {
+  public CommandApiMessageHandler getCommandApiMessageHandler() {
     return service;
   }
 

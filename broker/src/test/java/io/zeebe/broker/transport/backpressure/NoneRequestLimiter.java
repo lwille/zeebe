@@ -23,7 +23,7 @@ public class NoneRequestLimiter<ContextT> implements RequestLimiter<ContextT> {
   }
 
   @Override
-  public int getInflight() {
+  public int getInflightCount() {
     return 0;
   }
 }
