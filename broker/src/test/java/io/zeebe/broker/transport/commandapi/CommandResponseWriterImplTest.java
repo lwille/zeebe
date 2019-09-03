@@ -14,7 +14,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import io.zeebe.broker.transport.backpressure.NoneRequestLimiter;
+import io.zeebe.broker.transport.backpressure.NoopRequestLimiter;
 import io.zeebe.broker.transport.backpressure.RequestLimiter;
 import io.zeebe.protocol.record.ExecuteCommandResponseDecoder;
 import io.zeebe.protocol.record.MessageHeaderDecoder;
@@ -46,7 +46,7 @@ public class CommandResponseWriterImplTest {
   @Test
   public void shouldWriteResponse() {
     // given
-    responseWriter = new CommandResponseWriterImpl(null, new NoneRequestLimiter());
+    responseWriter = new CommandResponseWriterImpl(null, new NoopRequestLimiter());
 
     eventWriter.wrap(new UnsafeBuffer(EVENT), 0, EVENT.length);
 

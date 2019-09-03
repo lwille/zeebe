@@ -17,7 +17,7 @@ import static org.mockito.Mockito.mock;
 
 import com.netflix.concurrency.limits.limit.SettableLimit;
 import io.zeebe.broker.transport.backpressure.CommandRateLimiter;
-import io.zeebe.broker.transport.backpressure.NoneRequestLimiter;
+import io.zeebe.broker.transport.backpressure.NoopRequestLimiter;
 import io.zeebe.broker.transport.backpressure.RequestLimiter;
 import io.zeebe.distributedlog.DistributedLogstreamService;
 import io.zeebe.distributedlog.impl.DefaultDistributedLogstreamService;
@@ -89,7 +89,7 @@ public class CommandApiMessageHandlerTest {
   private LogStream logStream;
   private CommandApiMessageHandler messageHandler;
   private DistributedLogstreamService distributedLogImpl;
-  private RequestLimiter noneLimiter = new NoneRequestLimiter();
+  private RequestLimiter noneLimiter = new NoopRequestLimiter();
 
   @Before
   public void setup() {
